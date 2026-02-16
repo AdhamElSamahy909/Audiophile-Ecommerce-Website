@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: audiophile_ecommerce_website_db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-adminpassword}
+      POSTGRES_DB: ${DB_NAME:-audiophile_ecommerce_website_database}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - audiophile_ecommerce_website_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: audiophile_ecommerce_website_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    networks:
+      - audiophile_ecommerce_website_network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: audiophile_ecommerce_website_pgadmin
+    restart: always
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@aew.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - audiophile_ecommerce_website_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  audiophile_ecommerce_website_network:
+    driver: bridge
