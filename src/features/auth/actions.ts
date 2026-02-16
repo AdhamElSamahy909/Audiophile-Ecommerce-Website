@@ -2,12 +2,13 @@
 
 import { z } from "zod";
 import { cookies, headers } from "next/headers";
-import * as authService from "@/server/services/auth.service";
+import * as authService from "@/features/auth/services";
 import { db } from "@/server/db";
 import { eq } from "drizzle-orm";
 import { carts } from "@/server/db/schema";
 import { mergeCarts } from "@/features/cart/utils";
 import { redirect } from "next/navigation";
+import { verifyUser } from "./tokens";
 
 const authSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -53,7 +54,7 @@ export async function signupAction(formData: FormData) {
   } catch (error) {
     if (error instanceof Error) return { error: error.message };
 
-    return { error: "Something went wrong druing signup." };
+    return { error: "Something went wrong during signup." };
   }
 
   redirect("/dashboard");
@@ -68,7 +69,7 @@ export async function loginAction(prevState: unknown, formData: FormData) {
   const { username, password } = parsed.data;
 
   try {
-    const user = await authService.verifyUser(username, password);
+    const user = await verifyUser(username, password);
 
     const userAgent = (await headers()).get("user-agent") || "unknown-device";
 
