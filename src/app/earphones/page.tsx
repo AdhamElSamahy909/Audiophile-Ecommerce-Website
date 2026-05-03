@@ -1,5 +1,8 @@
-function Page() {
-  return <div>Page</div>;
-}
+import { getProducts } from "@/features/products/queries";
 
-export default Page;
+export default async function Page() {
+  const products = await getProducts("earphones");
+  console.log("Earphones:", products);
+
+  return <div>Earphones ({products.length})</div>;
+}

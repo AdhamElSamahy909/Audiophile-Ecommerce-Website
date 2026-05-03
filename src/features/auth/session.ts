@@ -1,8 +1,9 @@
 import { db } from "@/server/db";
-import { generateToken, hashToken } from "./tokens";
+import { generateToken, hashToken, verifyAccessToken, verifyUser } from "./tokens";
 import crypto from "crypto";
 import { refreshTokens } from "@/server/db/schema";
 import { and, eq } from "drizzle-orm";
+import { cookies } from "next/headers";
 
 export async function createSession(userId: string, userAgent: string) {
   const token = generateToken();
@@ -22,6 +23,13 @@ export async function createSession(userId: string, userAgent: string) {
         eq(refreshTokens.deviceHash, deviceHash),
       ),
     );
+
+  console.log(
+    userId,
+    tokenHash,
+    familyId,
+    deviceHash,
+  )
 
   await db.insert(refreshTokens).values({
     userId,
@@ -90,5 +98,23 @@ export async function revokeSession(rawToken: string) {
     await db
       .delete(refreshTokens)
       .where(eq(refreshTokens.familyId, token.familyId));
+  }
+}
+
+export async function getSession() {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get('accessToken')?.value;
+
+  console.log("Access Token: ", accessToken);
+
+  if (!accessToken) {
+    return null;
+  }
+
+  try {
+    const user = await verifyAccessToken(accessToken);
+    return user;
+  } catch (error) {
+    return null;
   }
 }

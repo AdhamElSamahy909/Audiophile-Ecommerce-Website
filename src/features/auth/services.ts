@@ -4,8 +4,12 @@ import argon2 from "argon2";
 import { eq } from "drizzle-orm";
 import { createSession } from "./session";
 import { generateAccessToken } from "./tokens";
+import { v4 as uuidv4 } from "uuid";
+import { rateLimit } from "@/server/redis/rate-limit";
 
 export async function signup(username: string, plainPassword: string) {
+  rateLimit();
+
   const exitingUser = await db.query.users.findFirst({
     where: eq(users.username, username),
   });
@@ -31,7 +35,7 @@ export async function loginUser(
 ) {
   const { refreshToken } = await createSession(userId, userAgent);
 
-  const accessToken = await generateAccessToken({ userId });
+  const accessToken = await generateAccessToken({ userId, jti: uuidv4() });
 
   return { accessToken, refreshToken };
 }

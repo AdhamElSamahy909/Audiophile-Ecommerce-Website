@@ -5,21 +5,26 @@ import { cookies, headers } from "next/headers";
 import * as authService from "@/features/auth/services";
 import { db } from "@/server/db";
 import { eq } from "drizzle-orm";
-import { carts } from "@/server/db/schema";
+import { carts, refreshTokens } from "@/server/db/schema";
 import { mergeCarts } from "@/features/cart/utils";
 import { redirect } from "next/navigation";
 import { verifyUser } from "./tokens";
+import { decodeJwt } from "jose";
+import { redis } from "@/server/redis/client";
+import { createHash } from "crypto";
 
 const authSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-const cookieStore = await cookies();
-
 export async function signupAction(formData: FormData) {
+  const cookieStore = await cookies();
+
   const data = Object.fromEntries(formData);
   const parsed = authSchema.safeParse(data);
+
+  console.log(parsed);
 
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
@@ -30,6 +35,8 @@ export async function signupAction(formData: FormData) {
 
     const userAgent = (await headers()).get("user-agent") || "unknown-device";
 
+    console.log(userAgent);
+
     const { refreshToken, accessToken } = await authService.loginUser(
       newUser.id,
       "user",
@@ -38,7 +45,7 @@ export async function signupAction(formData: FormData) {
 
     cookieStore.set("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 60 * 60 * 24 * 30,
       path: "/",
@@ -46,21 +53,27 @@ export async function signupAction(formData: FormData) {
 
     cookieStore.set("accessToken", accessToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 15,
       path: "/",
     });
   } catch (error) {
-    if (error instanceof Error) return { error: error.message };
+    if (error instanceof Error) {
+      console.log("Error object:", error);
+      console.log("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
+      return { error: error.message };
+    }
 
     return { error: "Something went wrong during signup." };
   }
 
-  redirect("/dashboard");
+  redirect("/");
 }
 
 export async function loginAction(prevState: unknown, formData: FormData) {
+  const cookieStore = await cookies();
+
   const data = Object.fromEntries(formData);
   const parsed = authSchema.safeParse(data);
 
@@ -79,6 +92,8 @@ export async function loginAction(prevState: unknown, formData: FormData) {
       userAgent,
     );
 
+    console.log("access and refresh tokens: ", accessToken, refreshToken);
+
     cookieStore.set("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -89,7 +104,7 @@ export async function loginAction(prevState: unknown, formData: FormData) {
 
     cookieStore.set("accessToken", accessToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 15,
       path: "/",
@@ -119,12 +134,53 @@ export async function loginAction(prevState: unknown, formData: FormData) {
 
   const redirectTo = formData.get("redirectTo") as string;
 
-  redirect(redirectTo || "/dashboard");
+  redirect(redirectTo || "/");
 }
 
 export async function logoutAction() {
-  (await cookies()).delete("accessToken");
-  (await cookies()).delete("refreshToken");
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("accessToken")?.value;
+  const refreshToken = cookieStore.get("refreshToken")?.value;
+  
+  if (accessToken) {
+    try {
+      const payload = decodeJwt(accessToken);
+      
+      if (payload.jti && payload.exp) {
+        const timeUntilExpiry = payload.exp - Math.floor(Date.now() / 1000);
+        
+        if (timeUntilExpiry > 0) {
+          await redis.set(`denylist:${payload.jti}`, "revoked", "EX", timeUntilExpiry);
+        }
+      }
+    } catch (error) {
+      
+    }
+  }
 
-  redirect("/login");
+  if (refreshToken) {
+    try {
+      const tokenHash = createHash('sha256').update(refreshToken).digest('hex');
+
+      const [tokenRecord] = await db
+      .select({familyId: refreshTokens.familyId})
+      .from(refreshTokens)
+      .where(eq(refreshTokens.tokenHash, tokenHash))
+      .limit(1);
+
+      if (tokenRecord) {
+        await db
+        .update(refreshTokens)
+        .set({isUsed: true})
+        .where(eq(refreshTokens.tokenHash, tokenHash));
+      }
+    } catch(error) {
+      console.error("Failed to flag refresh token as used in DB", error);
+    }
+  }
+
+  cookieStore.delete("refreshToken");
+  cookieStore.delete("accessToken");
+
+  // redirect("/login");
 }

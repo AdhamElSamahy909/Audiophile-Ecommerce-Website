@@ -4,6 +4,8 @@ import crypto from "crypto";
 import { eq } from "drizzle-orm";
 import { SignJWT } from "jose/jwt/sign";
 import argon2 from "argon2";
+import { jwtVerify } from "jose";
+import { redis } from "@/server/redis/client";
 
 export function generateToken(): string {
   return crypto.randomBytes(32).toString("hex");
@@ -15,6 +17,7 @@ export function hashToken(token: string): string {
 
 type AccessTokenPayload = {
   userId: string;
+  jti: string;
 };
 
 const ACCESS_TOKEN_SECRET = new TextEncoder().encode(
@@ -45,4 +48,45 @@ export async function verifyUser(username: string, plainPassword: string) {
   }
 
   return user;
+}
+
+export type AuthUser = {
+  id: string;
+  username: string;
+}
+
+export async function verifyAccessToken(token: string): Promise<AuthUser | null>{
+  try {
+    const {payload} = await jwtVerify(token, ACCESS_TOKEN_SECRET)
+
+    console.log("Payload: ", payload);
+    
+    const userId = payload.userId as string;
+    const jti = payload.jti;
+    
+    if (!userId || !jti) {
+      return null;
+    }
+
+    const isRevoked = await redis.get(`denylist:${jti}`);
+    if (isRevoked) {
+      return null;
+    }
+    
+    const [user] = await db.select({
+      id: users.id,
+      username: users.username
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+    
+    if (!user) {
+      return null;
+    }
+    
+    return user;
+  } catch (error) {
+    return null;
+  }
 }
