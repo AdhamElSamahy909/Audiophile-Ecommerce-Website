@@ -1,10 +1,9 @@
+import "../globals.css";
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
-import "./globals.css";
 import QueryProvider from "@/components/providers/QueryProvider";
-// import { getSession } from "@/features/auth/session";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import { AuthProvider } from "@/components/providers/AuthProvider";
+import { getSession } from "@/features/auth/session";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -21,17 +20,17 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // const user = await getSession();
+  const user = await getSession();
 
   return (
     <html lang="en">
-      <body className={`${manrope.variable} antialiased w-full relative`}>
-        <Header />
-        <QueryProvider>
-          <main>{children}</main>
-        </QueryProvider>
-        <Footer />
-      </body>
+      <QueryProvider>
+        <AuthProvider initUser={user}>
+          <body className={`${manrope.variable} antialiased w-full relative`}>
+            <main>{children}</main>
+          </body>
+        </AuthProvider>
+      </QueryProvider>
     </html>
   );
 }

@@ -6,7 +6,7 @@ import CategoryList from "../ui/CategoryList";
 
 function HomePage() {
   return (
-    <div className="pt-[12rem] w-full flex flex-col gap-[12rem] lg:gap-[16.8rem] px-[2.4rem] lg:px-[4rem] mb-[12rem] lg:mb-[20rem]">
+    <>
       <CategoryList />
 
       <Container>
@@ -32,7 +32,12 @@ function HomePage() {
                 Upgrade to premium speakers that are phenomenally built to
                 deliver truly remarkable sound.
               </p>
-              <Button variant="secondary1">see product</Button>
+              <Button
+                variant="secondary1"
+                href="/speakers/c22b4e84-64d6-449e-a858-206658f51bbb"
+              >
+                see product
+              </Button>
             </div>
           </div>
 
@@ -46,7 +51,12 @@ function HomePage() {
             <h2 className="text-black font-bold text-[2.8rem] mb-8 tracking-[0.2rem]">
               ZX7 SPEAKER
             </h2>
-            <Button variant="secondary2">see product</Button>
+            <Button
+              variant="secondary2"
+              href="/speakers/989d598e-a798-4df9-b905-9381d65b3565"
+            >
+              see product
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-[2.4rem] md:gap-[1.1rem] lg:gap-[3rem] w-full h-auto">
@@ -61,14 +71,19 @@ function HomePage() {
               <h2 className="text-black font-bold text-[2.8rem] mb-8 tracking-[0.2rem]">
                 YX1 EARPHONES
               </h2>
-              <Button variant="secondary2">see product</Button>
+              <Button
+                variant="secondary2"
+                href="/earphones/95ddf919-3695-4cd7-82a1-27331f33f790"
+              >
+                see product
+              </Button>
             </div>
           </div>
         </div>
       </Container>
 
       <BestAudioGear />
-    </div>
+    </>
   );
 }
 

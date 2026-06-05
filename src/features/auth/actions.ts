@@ -12,6 +12,8 @@ import { verifyUser } from "./tokens";
 import { decodeJwt } from "jose";
 import { redis } from "@/server/redis/client";
 import { createHash } from "crypto";
+import { rateLimit } from "@/server/redis/rate-limit-node";
+// import { revalidatePath } from "next/cache";
 
 const authSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -29,6 +31,12 @@ export async function signupAction(formData: FormData) {
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const { username, password } = parsed.data;
+
+  try {
+    await rateLimit();
+  } catch (_) {
+    return { error: "Too many signup attempts. Please try again later." };
+  }
 
   try {
     const newUser = await authService.signup(username, password);
@@ -58,10 +66,32 @@ export async function signupAction(formData: FormData) {
       maxAge: 60 * 15,
       path: "/",
     });
+
+    const guestCartId = cookieStore.get("guest_cart_id")?.value;
+
+    if (guestCartId) {
+      const existingUserCart = await db.query.carts.findFirst({
+        where: eq(carts.userId, newUser.id),
+      });
+
+      if (existingUserCart) {
+        await mergeCarts(guestCartId, existingUserCart.id);
+      } else {
+        await db
+          .update(carts)
+          .set({ userId: newUser.id })
+          .where(eq(carts.id, guestCartId));
+      }
+
+      cookieStore.delete("guest_cart_id");
+    }
   } catch (error) {
     if (error instanceof Error) {
       console.log("Error object:", error);
-      console.log("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
+      console.log(
+        "Stack trace:",
+        error instanceof Error ? error.stack : "No stack trace",
+      );
       return { error: error.message };
     }
 
@@ -80,6 +110,12 @@ export async function loginAction(prevState: unknown, formData: FormData) {
   if (!parsed.success) return { error: "Invalid input data." };
 
   const { username, password } = parsed.data;
+
+  try {
+    await rateLimit();
+  } catch (_) {
+    return { error: "Too many login attempts. Please try again later." };
+  }
 
   try {
     const user = await verifyUser(username, password);
@@ -141,40 +177,43 @@ export async function logoutAction() {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("accessToken")?.value;
   const refreshToken = cookieStore.get("refreshToken")?.value;
-  
+
   if (accessToken) {
     try {
       const payload = decodeJwt(accessToken);
-      
+
       if (payload.jti && payload.exp) {
         const timeUntilExpiry = payload.exp - Math.floor(Date.now() / 1000);
-        
+
         if (timeUntilExpiry > 0) {
-          await redis.set(`denylist:${payload.jti}`, "revoked", "EX", timeUntilExpiry);
+          await redis.set(
+            `denylist:${payload.jti}`,
+            "revoked",
+            "EX",
+            timeUntilExpiry,
+          );
         }
       }
-    } catch (error) {
-      
-    }
+    } catch (error) {}
   }
 
   if (refreshToken) {
     try {
-      const tokenHash = createHash('sha256').update(refreshToken).digest('hex');
+      const tokenHash = createHash("sha256").update(refreshToken).digest("hex");
 
       const [tokenRecord] = await db
-      .select({familyId: refreshTokens.familyId})
-      .from(refreshTokens)
-      .where(eq(refreshTokens.tokenHash, tokenHash))
-      .limit(1);
+        .select({ familyId: refreshTokens.familyId })
+        .from(refreshTokens)
+        .where(eq(refreshTokens.tokenHash, tokenHash))
+        .limit(1);
 
       if (tokenRecord) {
         await db
-        .update(refreshTokens)
-        .set({isUsed: true})
-        .where(eq(refreshTokens.tokenHash, tokenHash));
+          .update(refreshTokens)
+          .set({ isUsed: true })
+          .where(eq(refreshTokens.tokenHash, tokenHash));
       }
-    } catch(error) {
+    } catch (error) {
       console.error("Failed to flag refresh token as used in DB", error);
     }
   }

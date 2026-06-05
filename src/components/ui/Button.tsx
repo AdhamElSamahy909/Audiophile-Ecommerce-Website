@@ -6,26 +6,34 @@ const classes = {
   primary:
     "w-[16rem] h-[4.8rem] flex items-center justify-center bg-accent hover:bg-accent-light text-[1.3rem] text-white uppercase tracking-[0.1rem]",
   secondary1:
-    "w-[16rem] h-[4.8rem] flex items-center justify-center bg-black text-[1.3rem] text-white font-bold uppercase tracking-[0.1rem]",
+    "w-[16rem] h-[4.8rem] flex items-center justify-center bg-black text-[1.3rem] text-white font-bold uppercase tracking-[0.1rem] border border-black hover:bg-gray hover:text-black",
   secondary2:
-    "w-[16rem] h-[4.8rem] flex items-center justify-center bg-transparent text-[1.3rem] text-black font-bold uppercase tracking-[0.1rem] border border-black",
+    "w-[16rem] h-[4.8rem] flex items-center justify-center bg-transparent text-[1.3rem] text-black font-bold uppercase tracking-[0.1rem] border border-black hover:bg-black hover:text-white",
   tertiary:
-    "uppercase tracking-[0.1rem] text-black text-[1.3rem] opacity-50 hover:color-accent",
+    "uppercase tracking-[0.1rem] text-black text-[1.3rem] opacity-50 hover:text-accent",
 };
 
 function Button({
   children,
   variant,
+  href = "/",
+  className,
+  onClick,
+  disabled,
 }: {
   children: React.ReactNode;
   variant: "primary" | "secondary1" | "secondary2" | "tertiary";
+  href?: string;
+  className?: string;
+  onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <>
       {variant === "tertiary" ? (
         <Link
-          href={"/"}
-          className={classes[variant] + " flex items-center justify-center"}
+          href={href}
+          className={`${classes[variant]} flex items-center justify-center ${className || ""}`}
         >
           {children}
           <Image
@@ -37,7 +45,12 @@ function Button({
           />
         </Link>
       ) : (
-        <Link href={"/"} className={classes[variant]}>
+        <Link
+          href={href}
+          className={`${classes[variant]} ${className || ""} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+          onClick={onClick}
+          aria-disabled={disabled}
+        >
           {children}
         </Link>
       )}

@@ -2,6 +2,8 @@ import { db } from "@/server/db";
 import { cartItems, carts } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 
+// export async function getG
+
 export async function mergeCarts(guestCartId: string, userCartId: string) {
   await db.transaction(async (tx) => {
     const guestItems = await tx.query.cartItems.findMany({

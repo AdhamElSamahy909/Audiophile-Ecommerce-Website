@@ -28,7 +28,7 @@ const socialLinks = [
 
 function Footer() {
   return (
-    <footer className="mt-36 bg-[#101010] text-white">
+    <footer className="bg-[#101010] text-white">
       <div className="w-[85%] max-w-[1110px] mx-auto relative pb-12 flex flex-col items-center md:items-start text-center md:text-left">
         <div className="w-[100px] h-[4px] bg-accent absolute top-0 left-1/2 -translate-x-1/2 md:left-0 md:translate-x-0" />
 
@@ -54,10 +54,10 @@ function Footer() {
         </div>
 
         <p className="mt-12 text-white/50 max-w-[327px] md:max-w-2xl lg:max-w-[540px] text-[15px] leading-relaxed mx-auto md:mx-0">
-          Audiophile is an all in one stop to fulfill your audio needs. We&apos;re a
-          small team of music lovers and sound specialists who are devoted to
-          helping you get the most out of personal audio. Come and visit our
-          demo facility - we’re open 7 days a week.
+          Audiophile is an all in one stop to fulfill your audio needs.
+          We&apos;re a small team of music lovers and sound specialists who are
+          devoted to helping you get the most out of personal audio. Come and
+          visit our demo facility - we’re open 7 days a week.
         </p>
 
         <div className="mt-12 flex flex-col md:flex-row md:justify-between items-center w-full gap-12 md:gap-0">

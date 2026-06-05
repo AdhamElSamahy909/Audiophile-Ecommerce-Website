@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* @source "../app"; */
+@source "../components";
+@source "../features";
+
 :root {
   --accent: oklch(67.92% 0.1309 48.59);
   --accent-light: oklch(81.72% 0.1055 49.7);

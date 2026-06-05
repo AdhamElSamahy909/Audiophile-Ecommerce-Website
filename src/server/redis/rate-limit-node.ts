@@ -1,3 +1,5 @@
+//  Vault Door
+
 import { headers } from "next/headers";
 import { redis } from "./client";
 

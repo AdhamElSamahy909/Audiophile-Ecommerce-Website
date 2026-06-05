@@ -1,0 +1,11 @@
+For the file structure in the attached screenshot, it is not possible to navigate to the "/login" path. The browser displays the following when navigating to either "/login" or "/signup":
+
+
+
+This page isn’t working
+
+If the problem continues, contact the site owner.HTTP ERROR 405
+
+
+
+For more information, the middleware.ts, is configured as to 

@@ -1,10 +1,36 @@
+"use server";
+
 import { db } from "@/server/db";
 import { carts } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
+import { cookies } from "next/headers";
+import { getSession } from "../auth/session";
 
-export async function getCartWithTotal(cartId: string) {
+export async function getCartWithTotal() {
+  const cookieStore = await cookies();
+  const user = await getSession();
+
+  let activeCartId: string | undefined = undefined;
+
+  if (user) {
+    const userCart = await db.query.carts.findFirst({
+      where: eq(carts.userId, user.id),
+      columns: { id: true },
+    });
+
+    if (userCart) {
+      activeCartId = userCart.id;
+    }
+  } else {
+    const guestCarId = cookieStore.get("guest_cart_id")?.value;
+
+    if (guestCarId) {
+      activeCartId = guestCarId;
+    }
+  }
+
   const items = await db.query.carts.findFirst({
-    where: eq(carts.id, cartId),
+    where: eq(carts.id, activeCartId as string),
     with: {
       items: {
         with: {

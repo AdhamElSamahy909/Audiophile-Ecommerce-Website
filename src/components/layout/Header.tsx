@@ -1,13 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-// import { getSession } from "@/features/auth/session";
 import { logoutAction } from "@/features/auth/actions";
 import useScreenWidth from "@/hooks/useScreenWidth";
 import Image from "next/image";
 import { Menu, ShoppingCart } from "lucide-react";
 import Button from "../ui/Button";
 import useGetPathname from "@/hooks/useGetPathname";
+import { User } from "lucide-react";
+import { useAuth } from "../providers/AuthProvider";
 
 const NAV_LINKS = [
   { label: "home", href: "/" },
@@ -16,14 +18,30 @@ const NAV_LINKS = [
   { label: "earphones", href: "/earphones" },
 ];
 
+const bgImageClasses: Record<string, string> = {
+  mobile: "bg-[url('/assets/home/mobile/image-header.jpg')]",
+  tablet: "bg-[url('/assets/home/tablet/image-header.jpg')]",
+  desktop: "bg-[url('/assets/home/desktop/image-header.jpg')]",
+};
+
 export default function Header() {
   const screenWidth = useScreenWidth();
   const pathname = useGetPathname();
-  // const user = await getSession();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const user = useAuth((state) => state.user);
+  const clearUser = useAuth((state) => state.clearUser);
+
+  const handleLogout = async () => {
+    await logoutAction();
+    setShowUserMenu(false);
+    clearUser();
+  };
+
+  console.log("User in Header: ", user);
 
   return (
     <header
-      className={`w-full ${pathname === "home" ? "h-[60rem] md:h-[73rem]" : ""} ${pathname === "home" ? `bg-[url('/assets/home/${screenWidth}/image-header.jpg')] bg-cover bg-bottom md:bg-center bg-no-repeat` : "bg-black"}`}
+      className={`w-full ${pathname === "home" ? "h-[60rem] md:h-[73rem]" : ""} ${pathname === "home" ? `${bgImageClasses[screenWidth]} bg-cover bg-bottom md:bg-center bg-no-repeat` : "bg-black"}`}
     >
       <div className="w-full max-w-[1110px] mx-auto px-[2.4rem] md:px-[4rem] lg:px-0">
         <nav className="flex justify-between items-center text-white py-[3.2rem] border-b border-white/10 relative z-50">
@@ -51,7 +69,35 @@ export default function Header() {
             ))}
           </div>
 
-          <ShoppingCart className="cursor-pointer" />
+          <div className="flex items-center gap-[2.4rem]">
+            <ShoppingCart className="cursor-pointer hover:text-accent transition-colors" />
+            <div className="relative">
+              <User
+                className="cursor-pointer hover:text-accent transition-colors"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+              />
+              {showUserMenu && (
+                <div className="absolute top-[4.5rem] right-0 bg-white shadow-[0px_10px_30px_-10px_rgba(0,0,0,0.5)] rounded-[0.8rem] min-w-[15rem] z-50 overflow-hidden py-[0.8rem]">
+                  {user ? (
+                    <button
+                      className="w-full text-left px-[2.4rem] py-[1.2rem] hover:text-accent transition-colors text-[1.3rem] font-bold uppercase tracking-[0.15rem] cursor-pointer text-black"
+                      onClick={handleLogout}
+                    >
+                      logout
+                    </button>
+                  ) : (
+                    <Link
+                      href="/login"
+                      className="block w-full text-left px-[2.4rem] py-[1.2rem] hover:text-accent transition-colors text-[1.3rem] font-bold uppercase tracking-[0.15rem] text-black"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      login
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </nav>
       </div>
 
@@ -71,7 +117,12 @@ export default function Header() {
               made for the passionate music enthusiast.
             </p>
 
-            <Button variant="primary">see product</Button>
+            <Button
+              variant="primary"
+              href="/headphones/xx99-mark-two-headphones"
+            >
+              see product
+            </Button>
           </div>
         </div>
       )}

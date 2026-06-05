@@ -18,7 +18,9 @@ function CategoryCard({ name, image }: { name: string; image: string }) {
         <h2 className="text-[1.5rem] font-bold uppercase tracking-[0.13rem] text-black">
           {name}
         </h2>
-        <Button variant="tertiary">Shop</Button>
+        <Button variant="tertiary" href={name.toLowerCase()}>
+          Shop
+        </Button>
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { checkEdgeRateLimit } from "./server/redis/rate-limit-edge";
 
-const protectedRoutes = ["/checkout"];
+const protectedRoutes = ["/orders"];
 
 const authRoutes = ["/login", "/signup"];
 
@@ -12,8 +13,25 @@ const getJwtSecretKey = () => {
 };
 
 export async function middleware(req: NextRequest) {
+  const ipAddress = req.headers.get("x-forwarded-for") || "anonymous";
+  const { success } = await checkEdgeRateLimit(ipAddress);
+
+  if (!success) {
+    return new NextResponse(
+      "Too Many Requests. Please try again in a minute.",
+      {
+        status: 429,
+        headers: {
+          "Retry-After": "60",
+        },
+      },
+    );
+  }
+
   const path = req.nextUrl.pathname;
-  const isProtectedRoute = protectedRoutes.some((route) => path.startsWith(route));
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    path.startsWith(route),
+  );
   const isAuthRoute = authRoutes.includes(path);
 
   const accessToken = req.cookies.get("accessToken")?.value;
@@ -28,8 +46,7 @@ export async function middleware(req: NextRequest) {
       }
 
       return NextResponse.next();
-    } catch (_) {
-    }
+    } catch (_) {}
   }
 
   if (refreshToken) {
