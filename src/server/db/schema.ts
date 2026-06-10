@@ -127,10 +127,7 @@ export const cartItems = pgTable("cart_itmes", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const paymentMethodEnum = pgEnum("payment_method", [
-  "COD",
-  "CREDIT_CARD",
-]);
+export const paymentMethodEnum = pgEnum("payment_method", ["COD", "CARD"]);
 
 export const paymentStatusEnum = pgEnum("payment_status", [
   "PENDING",
@@ -156,7 +153,7 @@ export const orders = pgTable("orders", {
     .default("PENDING")
     .notNull(),
 
-  stripeSessionId: varchar("stripe_session_id", { length: 255 }).unique(),
+  stripeIntentId: varchar("stripe_intent_id", { length: 255 }).unique(),
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -253,3 +250,19 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
 
 export type Product = typeof products.$inferSelect;
 export type User = typeof users.$inferSelect;
+export type Cart = typeof carts.$inferSelect;
+export type CartItem = typeof cartItems.$inferSelect;
+export type Order = typeof orders.$inferSelect;
+
+// export type CartWithFullItems = Cart & {
+//   items: (CartItem & {
+//     product: Product;
+//   })[];
+// };
+
+export type CartWithTotal = Cart & {
+  items: (CartItem & {
+    product: Product;
+  })[];
+  totalPrice: number;
+};

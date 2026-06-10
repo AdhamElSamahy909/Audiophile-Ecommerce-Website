@@ -1,12 +1,12 @@
 "use server";
 
 import { db } from "@/server/db";
-import { carts } from "@/server/db/schema";
+import { carts, CartWithTotal } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { getSession } from "../auth/session";
 
-export async function getCartWithTotal() {
+export async function getCartWithTotal(): Promise<CartWithTotal | null> {
   const cookieStore = await cookies();
   const user = await getSession();
 
@@ -28,6 +28,9 @@ export async function getCartWithTotal() {
       activeCartId = guestCarId;
     }
   }
+
+  console.log("Active Cart ID: ", activeCartId);
+  if (!activeCartId) return null;
 
   const items = await db.query.carts.findFirst({
     where: eq(carts.id, activeCartId as string),

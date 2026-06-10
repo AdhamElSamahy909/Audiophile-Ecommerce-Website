@@ -95,6 +95,7 @@ export async function signupAction(formData: FormData) {
       return { error: error.message };
     }
 
+    console.log("Signup error: ", error);
     return { error: "Something went wrong during signup." };
   }
 
@@ -104,8 +105,16 @@ export async function signupAction(formData: FormData) {
 export async function loginAction(prevState: unknown, formData: FormData) {
   const cookieStore = await cookies();
 
-  const data = Object.fromEntries(formData);
+  const data = {
+    username: formData.get("username"),
+    password: formData.get("password"),
+  };
+
+  console.log("Login form data: ", data);
+
   const parsed = authSchema.safeParse(data);
+
+  console.log("Parsed login data: ", parsed);
 
   if (!parsed.success) return { error: "Invalid input data." };
 
@@ -165,6 +174,7 @@ export async function loginAction(prevState: unknown, formData: FormData) {
       cookieStore.delete("guest_cart_id");
     }
   } catch (error) {
+    console.error("Login error:", error);
     return { error: "Invalid username or password" };
   }
 

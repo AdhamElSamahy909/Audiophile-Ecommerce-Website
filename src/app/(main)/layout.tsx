@@ -6,6 +6,7 @@ import { getSession } from "@/features/auth/session";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import CheckoutProvider from "@/features/checkout/components/CheckoutProvider";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -28,17 +29,19 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <QueryProvider>
-        <AuthProvider initUser={user}>
-          <body className={`${manrope.variable} antialiased w-full relative`}>
-            <Header />
-            <main className="pt-[12rem] w-full flex flex-col gap-[12rem] lg:gap-[16.8rem] px-[2.4rem] lg:px-[4rem] mb-[12rem] lg:mb-[20rem]">
-              {children}
-            </main>
-            <Footer />
-          </body>
-        </AuthProvider>
-      </QueryProvider>
+      <body className={`${manrope.variable} antialiased w-full relative`}>
+        <QueryProvider>
+          <AuthProvider initUser={user}>
+            <CheckoutProvider>
+              <Header />
+              <main className="pt-[12rem] w-full flex flex-col gap-[12rem] lg:gap-[16.8rem] px-[2.4rem] lg:px-[4rem] mb-[12rem] lg:mb-[20rem]">
+                {children}
+              </main>
+              <Footer />
+            </CheckoutProvider>
+          </AuthProvider>
+        </QueryProvider>
+      </body>
     </html>
   );
 }

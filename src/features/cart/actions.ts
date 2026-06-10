@@ -2,7 +2,7 @@
 
 import { db } from "@/server/db";
 import { cartItems, carts } from "@/server/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { getSession } from "../auth/session";
@@ -77,4 +77,25 @@ export async function addToCart(productId: string, quantity: number = 1) {
   }
 
   revalidatePath("/");
+}
+
+export async function updateCart(
+  cartId: string,
+  productId: string,
+  quantity: number,
+) {
+  await db
+    .update(cartItems)
+    .set({ quantity })
+    .where(
+      and(eq(cartItems.cartId, cartId), eq(cartItems.productId, productId)),
+    );
+
+  revalidatePath("/checkout");
+}
+
+export async function deleteCart(cartId: string) {
+  await db.delete(cartItems).where(eq(cartItems.cartId, cartId));
+
+  revalidatePath("/checkout");
 }

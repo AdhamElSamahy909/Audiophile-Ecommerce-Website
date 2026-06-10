@@ -1,8 +1,8 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { checkEdgeRateLimit } from "./server/redis/rate-limit-edge";
 
-const protectedRoutes = ["/orders"];
+const protectedRoutes = ["/orders", "/checkout"];
 
 const authRoutes = ["/login", "/signup"];
 
@@ -50,13 +50,50 @@ export async function middleware(req: NextRequest) {
   }
 
   if (refreshToken) {
-    if (isProtectedRoute || isAuthRoute) {
-      const rotateUrl = new URL("/api/auth/rotate", req.url);
-      rotateUrl.searchParams.set("redirect", path);
-      return NextResponse.redirect(rotateUrl);
+    let baseUrl = req.nextUrl.origin;
+    if (process.env.NODE_ENV === "development") {
+      baseUrl = baseUrl.replace("localhost", "127.0.0.1");
     }
 
-    return NextResponse.next();
+    const rotateApiUrl = new URL("/api/auth/rotate", baseUrl);
+
+    try {
+      const rotationResponse = await fetch(rotateApiUrl.toString(), {
+        method: "POST",
+        headers: {
+          cookie: req.headers.get("cookie") || "",
+        },
+      });
+
+      if (!rotationResponse.ok) {
+        const loginUrl = new URL("/login", req.url);
+        loginUrl.searchParams.set("from", path);
+        const response = NextResponse.redirect(loginUrl);
+        response.cookies.delete("accessToken");
+        response.cookies.delete("refreshToken");
+        return response;
+      }
+
+      let finalResponse;
+      if (isAuthRoute) {
+        finalResponse = NextResponse.redirect(new URL("/", req.url));
+      } else {
+        finalResponse = NextResponse.next();
+      }
+
+      const setCookieHeaders = rotationResponse.headers.getSetCookie();
+
+      for (const cookieStr of setCookieHeaders) {
+        finalResponse.headers.append("Set-Cookie", cookieStr);
+      }
+
+      return finalResponse;
+    } catch (error) {
+      console.error("Middleware fetch error: ", error);
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("from", path);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   if (isProtectedRoute) {
@@ -73,3 +110,53 @@ export const config = {
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
+
+// if (refreshToken) {
+//   // 1. Construct a safe Base URL that forces IPv4 in local development
+//   let baseUrl = req.nextUrl.origin;
+//   if (process.env.NODE_ENV === "development") {
+//     baseUrl = baseUrl.replace("localhost", "127.0.0.1");
+//   }
+
+//   // 2. Build the exact API URL
+//   const rotateApiUrl = new URL("/api/auth/rotate", baseUrl);
+
+//   try {
+//     // 3. Execute the fetch inside a try/catch to gracefully handle future network blips
+//     const rotationResponse = await fetch(rotateApiUrl.toString(), {
+//       method: "POST",
+//       headers: {
+//         cookie: req.headers.get("cookie") || "",
+//       },
+//     });
+
+//     if (!rotationResponse.ok) {
+//       const loginUrl = new URL("/login", req.url);
+//       loginUrl.searchParams.set("from", path);
+//       const response = NextResponse.redirect(loginUrl);
+//       response.cookies.delete("accessToken");
+//       response.cookies.delete("refreshToken");
+//       return response;
+//     }
+
+//     let finalResponse;
+//     if (isAuthRoute) {
+//       finalResponse = NextResponse.redirect(new URL("/", req.url));
+//     } else {
+//       finalResponse = NextResponse.next();
+//     }
+
+//     const setCookieHeaders = rotationResponse.headers.getSetCookie();
+//     for (const cookieStr of setCookieHeaders) {
+//       finalResponse.headers.append("Set-Cookie", cookieStr);
+//     }
+
+//     return finalResponse;
+//   } catch (error) {
+//     // If the fetch fails entirely (e.g., network down), fallback to login
+//     console.error("Middleware fetch error:", error);
+//     const loginUrl = new URL("/login", req.url);
+//     loginUrl.searchParams.set("from", path);
+//     return NextResponse.redirect(loginUrl);
+//   }
+// }

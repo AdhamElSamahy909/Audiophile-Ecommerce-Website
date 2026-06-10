@@ -10,6 +10,9 @@ import Button from "../ui/Button";
 import useGetPathname from "@/hooks/useGetPathname";
 import { User } from "lucide-react";
 import { useAuth } from "../providers/AuthProvider";
+import { useCart } from "@/features/cart/hooks/useCart";
+import { useUpdateCart } from "@/features/cart/hooks/useUpdateCart";
+import { useDeleteCart } from "@/features/cart/hooks/useDeleteCart";
 
 const NAV_LINKS = [
   { label: "home", href: "/" },
@@ -24,17 +27,42 @@ const bgImageClasses: Record<string, string> = {
   desktop: "bg-[url('/assets/home/desktop/image-header.jpg')]",
 };
 
+const formatProductName = (name: string) => {
+  let formatted = name
+    .replace(/(Headphones|Earphones|Speaker|Wireless)/gi, "")
+    .trim();
+  formatted = formatted.replace(/Mark One/gi, "MK I");
+  formatted = formatted.replace(/Mark Two/gi, "MK II");
+  return formatted;
+};
+
 export default function Header() {
   const screenWidth = useScreenWidth();
   const pathname = useGetPathname();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showCartModal, setShowCartModal] = useState(false);
   const user = useAuth((state) => state.user);
   const clearUser = useAuth((state) => state.clearUser);
+  const { data: cart } = useCart(user?.id as string, "interactive");
+  const { updateCart, isUpdating } = useUpdateCart(user?.id as string);
+  const { deleteFromCart, isDeleting } = useDeleteCart(user?.id as string);
+
+  console.log("Cart in Header: ", cart);
+  const isCartEmpty = !cart || cart.items.length === 0;
 
   const handleLogout = async () => {
     await logoutAction();
     setShowUserMenu(false);
     clearUser();
+  };
+
+  const handleUpdateCart = (productId: string, quantity: number) => {
+    updateCart({ cartId: cart?.id as string, productId, quantity });
+  };
+
+  const handleDeleteCart = (cartId: string) => {
+    deleteFromCart({ cartId });
+    setShowCartModal(false);
   };
 
   console.log("User in Header: ", user);
@@ -70,7 +98,117 @@ export default function Header() {
           </div>
 
           <div className="flex items-center gap-[2.4rem]">
-            <ShoppingCart className="cursor-pointer hover:text-accent transition-colors" />
+            <div className="relative">
+              <ShoppingCart
+                className="cursor-pointer hover:text-accent transition-colors"
+                onClick={() => setShowCartModal(!showCartModal)}
+              />
+              {cart?.items && cart.items.length > 0 ? (
+                <span className="absolute -top-[0.8rem] -right-[0.8rem] bg-accent text-white text-[1rem] font-bold w-[1.8rem] h-[1.8rem] flex items-center justify-center rounded-full">
+                  {cart.items.reduce((total, item) => total + item.quantity, 0)}
+                </span>
+              ) : null}
+              {showCartModal && (
+                <div className="absolute top-[4.5rem] right-0 bg-white shadow-[0px_10px_30px_-10px_rgba(0,0,0,0.5)] rounded-[0.8rem] min-w-[37.7rem] z-50 p-[3.2rem]">
+                  <div className="flex justify-between items-center mb-[3.2rem]">
+                    <h6 className="text-black text-[1.8rem] font-bold uppercase tracking-[0.13rem]">
+                      CART ({cart?.items?.length || 0})
+                    </h6>
+                    {!isCartEmpty && (
+                      <button
+                        className="text-black/50 text-[1.5rem] hover:text-accent underline transition-colors"
+                        onClick={() => handleDeleteCart(cart?.id as string)}
+                      >
+                        Remove all
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-[2.4rem] mb-[3.2rem] max-h-[24rem] overflow-y-auto">
+                    {cart?.items && cart.items.length > 0 ? (
+                      cart.items.map((item) => (
+                        <div
+                          key={item.productId}
+                          className="flex items-center gap-[1.6rem]"
+                        >
+                          <div className="w-[6.4rem] h-[6.4rem] rounded-[0.8rem] bg-[#f1f1f1] overflow-hidden flex items-center justify-center">
+                            <Image
+                              src={`/assets/cart/image-${item.product.slug}.jpg`}
+                              alt={item.product.name}
+                              width={64}
+                              height={64}
+                              className="w-[4.2rem] h-[4.2rem] object-contain flex-shrink-0"
+                              unoptimized
+                            />
+                          </div>
+                          <div className="flex-1 flex flex-col text-black justify-center">
+                            <span className="text-[1.5rem] font-bold leading-[2.5rem]">
+                              {formatProductName(item.product.name)}
+                            </span>
+                            <span className="text-[1.4rem] font-bold opacity-50 leading-[2.5rem]">
+                              $ {item.product.price.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center bg-[#F1F1F1] h-[3.2rem] w-[9.6rem] justify-between px-[1.1rem]">
+                            <button
+                              onClick={() =>
+                                handleUpdateCart(
+                                  item.productId,
+                                  item.quantity - 1,
+                                )
+                              }
+                              className="text-black/25 hover:text-accent font-bold text-[1.3rem] tracking-[1px]"
+                            >
+                              -
+                            </button>
+                            <span className="text-black font-bold text-[1.3rem]">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() =>
+                                handleUpdateCart(
+                                  item.productId,
+                                  item.quantity + 1,
+                                )
+                              }
+                              className="text-black/25 hover:text-accent font-bold text-[1.3rem] tracking-[1px]"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-black/50 text-center text-[1.5rem]">
+                        Your cart is empty
+                      </p>
+                    )}
+                  </div>
+
+                  {!isCartEmpty && (
+                    <>
+                      <div className="flex justify-between items-center mb-[2.4rem]">
+                        <span className="text-black/50 text-[1.5rem] uppercase">
+                          Total
+                        </span>
+                        <span className="text-black text-[1.8rem] font-bold">
+                          ${(cart?.totalPrice || 0).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <Button
+                        variant="primary"
+                        href="/checkout"
+                        className={`w-full ${isUpdating || isDeleting ? "cursor-not-allowed opacity-50" : ""}`}
+                        onClick={() => setShowCartModal(false)}
+                      >
+                        checkout
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="relative">
               <User
                 className="cursor-pointer hover:text-accent transition-colors"

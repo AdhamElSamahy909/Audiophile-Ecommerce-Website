@@ -9,7 +9,9 @@ import Button from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { Product } from "@/server/db/schema";
 import useScreenWidth from "@/hooks/useScreenWidth";
-import { addToCart } from "../cart/actions";
+// import { addToCart } from "../cart/actions";
+import { useAddToCart } from "../cart/hooks/useAddToCart";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 type ProductWithRelations = Product & {
   images?: {
@@ -40,6 +42,8 @@ export default function ProductDetails({
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const user = useAuth((state) => state.user);
+  const { addToCart } = useAddToCart(user?.id as string);
 
   const deskImg = product.mainDesktopImage.replace("./assets", "/assets");
   const tabImg = product.mainTabletImage.replace("./assets", "/assets");
@@ -54,14 +58,13 @@ export default function ProductDetails({
 
   function handleAddToCart() {
     setIsLoading(true);
-    addToCart(product.id, quantity);
+    addToCart({ productId: product.id, quantity });
     setIsLoading(false);
   }
 
   return (
     <>
       <Container>
-        {/* Go Back */}
         <div className="mb-[3.2rem] md:mb-[4.7rem] lg:mb-[6.4rem]">
           <button
             onClick={() => router.back()}
@@ -71,9 +74,7 @@ export default function ProductDetails({
           </button>
         </div>
 
-        {/* ── Product Overview ── */}
         <div className="flex flex-col gap-[3.2rem] mb-[8.8rem] md:flex-row md:items-center md:gap-[6.9rem] md:mb-[12rem] lg:gap-[12.5rem] lg:mb-[16rem]">
-          {/* Product image */}
           <div className="w-full shrink-0 rounded-[0.8rem] bg-[#F1F1F1] flex items-center justify-center overflow-hidden h-[32.7rem] md:w-[28.1rem] md:h-[48rem] lg:w-[54rem] lg:h-[56rem]">
             <Image
               src={mobImg.replace("/mobile/", `/${screenWidth}/`)}
@@ -84,7 +85,6 @@ export default function ProductDetails({
             />
           </div>
 
-          {/* Product info */}
           <div className="flex-1 flex flex-col items-start text-left">
             {product.new && (
               <p className="text-accent tracking-[1rem] text-[1.4rem] font-normal uppercase mb-[2.4rem] md:mb-[1.6rem]">

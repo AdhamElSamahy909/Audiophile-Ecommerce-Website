@@ -4,11 +4,14 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { useCart } from "@/features/cart/useCart";
+import { useCart } from "@/features/cart/hooks/useCart";
+import CartItems from "@/features/cart/components/CartItems";
+import { CheckoutForm } from "@stripe/react-stripe-js/checkout";
+import PaymentWrappet from "@/components/providers/PaymentWrappet";
 
 export default function Checkout() {
   const user = useAuth((state) => state.user);
-  const { data: cart } = useCart(user?.id as string);
+  const { data: cart } = useCart(user?.id as string, "strict");
   console.log("cart: ", cart);
   const router = useRouter();
   const [paymentMethod, setPaymentMethod] = useState<
@@ -182,7 +185,7 @@ export default function Checkout() {
                       className="accent-accent w-[2rem] h-[2rem]"
                     />
                     <span className="text-[1.4rem] font-bold tracking-[-0.025rem]">
-                      e-Money
+                      Card Payment
                     </span>
                   </label>
                   <label
@@ -203,39 +206,7 @@ export default function Checkout() {
                 </div>
               </div>
 
-              {paymentMethod === "e-Money" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-[1.6rem] gap-y-[2.4rem] mt-[2.4rem]">
-                  <div className="flex flex-col gap-[0.9rem]">
-                    <label
-                      htmlFor="eMoneyNumber"
-                      className="text-[1.2rem] font-bold tracking-[-0.021rem]"
-                    >
-                      e-Money Number
-                    </label>
-                    <input
-                      type="text"
-                      id="eMoneyNumber"
-                      placeholder="238521993"
-                      className="h-[5.6rem] px-[2.4rem] border border-[#cfcfcf] rounded-[0.8rem] text-[1.4rem] font-bold tracking-[-0.025rem] focus:outline-none focus:border-accent"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-[0.9rem]">
-                    <label
-                      htmlFor="eMoneyPIN"
-                      className="text-[1.2rem] font-bold tracking-[-0.021rem]"
-                    >
-                      e-Money PIN
-                    </label>
-                    <input
-                      type="text"
-                      id="eMoneyPIN"
-                      placeholder="6891"
-                      className="h-[5.6rem] px-[2.4rem] border border-[#cfcfcf] rounded-[0.8rem] text-[1.4rem] font-bold tracking-[-0.025rem] focus:outline-none focus:border-accent"
-                    />
-                  </div>
-                </div>
-              )}
+              {paymentMethod === "e-Money" && <PaymentWrappet />}
 
               {paymentMethod === "Cash on Delivery" && (
                 <div className="flex gap-[3.2rem] items-center mt-[3.2rem]">
@@ -263,44 +234,7 @@ export default function Checkout() {
             Summary
           </h2>
 
-          <div className="flex flex-col gap-[2.4rem] mb-[3.2rem]">
-            {cart?.items?.map((item) => {
-              const formatProductName = (name: string) => {
-                let formatted = name
-                  .replace(/(Headphones|Earphones|Speaker|Wireless)/gi, "")
-                  .trim();
-                formatted = formatted.replace(/Mark One/gi, "MK I");
-                formatted = formatted.replace(/Mark Two/gi, "MK II");
-                return formatted;
-              };
-
-              return (
-                <div key={item.id} className="flex items-center gap-[1.6rem]">
-                  <div className="w-[6.4rem] h-[6.4rem] rounded-[0.8rem] bg-[#f1f1f1] overflow-hidden flex items-center justify-center">
-                    <Image
-                      src={`/assets/cart/image-${item.product.slug}.jpg`}
-                      alt={item.product.name}
-                      width={64}
-                      height={64}
-                      className="w-[4.2rem] h-[4.2rem] object-contain flex-shrink-0"
-                      unoptimized
-                    />
-                  </div>
-                  <div className="flex-1 flex flex-col justify-center">
-                    <span className="text-[1.5rem] font-bold leading-[2.5rem]">
-                      {formatProductName(item.product.name)}
-                    </span>
-                    <span className="text-[1.4rem] font-bold opacity-50 leading-[2.5rem]">
-                      $ {item.product.price.toLocaleString()}
-                    </span>
-                  </div>
-                  <span className="text-[1.5rem] font-bold text-black opacity-50">
-                    x{item.quantity}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          <CartItems items={cart?.items} />
 
           <div className="flex flex-col gap-[0.8rem] mb-[2.4rem]">
             <div className="flex justify-between items-center">
